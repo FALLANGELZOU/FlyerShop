@@ -8,6 +8,7 @@ import taboolib.module.nms.ItemTag
 import taboolib.module.nms.ItemTagData
 import taboolib.module.nms.getItemTag
 import taboolib.module.nms.setItemTag
+import java.util.UUID
 
 object ItemUtils {
 
@@ -46,5 +47,14 @@ object ItemUtils {
 
     fun ItemStack.getTag(key: String): ItemTagData? { return getItemTag()[key] }
 
+    fun ItemStack.modifyTag(block: (tag: ItemTag) -> Unit): ItemStack {
+        val tag = this.getItemTag()
+        block(tag)
+        return this.setItemTag(tag)
+    }
 
+    /** 生成一个唯一识别符 **/
+    fun generateItemUUID(): String {
+        return UUID.randomUUID().toString()
+    }
 }

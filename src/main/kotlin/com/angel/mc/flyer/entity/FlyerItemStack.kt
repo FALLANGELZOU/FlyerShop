@@ -3,6 +3,8 @@ package com.angel.mc.flyer.entity
 import com.angel.mc.flyer.Key
 import com.angel.mc.flyer.menu.shopEnum.ItemShopStatus
 import com.angel.mc.flyer.utils.GsonUtils
+import com.angel.mc.flyer.utils.ItemUtils.modifyTag
+import com.angel.mc.flyer.utils.ItemUtils.removeTag
 import com.angel.mc.flyer.utils.toBean
 import com.angel.mc.flyer.utils.toJson
 import com.angel.mc.flyer.utils.toMap
@@ -41,10 +43,48 @@ class FlyerItemStack(item: ItemStack = ItemStack(Material.BEDROCK)) {
         return item
     }
 
+    /** 生成没有商品NBT标签的物品 **/
+    fun getItemWithoutShopInfo(): ItemStack {
+        val item = getItem()
+        return item.modifyTag {
+            it.remove(Key.NBT.ITEM_MAX_PRICE)
+            it.remove(Key.NBT.ITEM_MIN_PRICE)
+            it.remove(Key.NBT.ITEM_SHOP_STATUS)
+            it.remove(Key.NBT.ITEM_SHOP_LIMIT)
+            it.remove(Key.NBT.ITEM_SHOP_COUNT)
+            it.remove(Key.NBT.ITEM_SHOP_ID)
+        }
+    }
+
     /** 生成不带lore的物品 **/
     fun getItemWithoutLore(): ItemStack {
         return sourceItem.setItemTag(nbt)
     }
+
+    /** 增加商品购买/出售次数 **/
+    fun addShopCount(count: Int = 1) {
+        val current = getTag(Key.NBT.ITEM_SHOP_COUNT)?.asInt() ?: 0
+        addTag(Key.NBT.ITEM_SHOP_COUNT, ItemTagData(current + count))
+    }
+
+    /** 获得商品购买/出售次数 **/
+    fun getShopCount() = getTag(Key.NBT.ITEM_SHOP_COUNT)?.asInt() ?: 0
+
+    /** 清除商品购买/出售次数 **/
+    fun clearShopCount() = removeTag(Key.NBT.ITEM_SHOP_COUNT)
+
+    /** 设置商品数量限制 **/
+    fun setShopLimit(number: Int?) {
+        if (number == null) {
+            removeTag(Key.NBT.ITEM_SHOP_LIMIT)
+        } else {
+            addTag(Key.NBT.ITEM_SHOP_LIMIT, ItemTagData(number))
+        }
+    }
+
+    /** 获取商品数量限制 **/
+    fun getShopLimit(): Int? = getTag(Key.NBT.ITEM_SHOP_LIMIT)?.asInt()
+
 
     /** 设置商品属性 **/
     fun setShopStatus(status: ItemShopStatus? = null) {
@@ -84,6 +124,18 @@ class FlyerItemStack(item: ItemStack = ItemStack(Material.BEDROCK)) {
     fun getDisplayName(): String { return sourceItem.getName() }
 
 
+    /** 获取商品唯一识别id **/
+    fun getItemShopId(): String? {
+        return getTag(Key.NBT.ITEM_SHOP_ID)?.asString()
+    }
+
+    /** 设置商品唯一识别id **/
+    fun setItemShopId(id: String) { addTag(Key.NBT.ITEM_SHOP_ID, ItemTagData(id)) }
+
+    /** 判断该物品是否是商品 **/
+    fun isShopItem(): Boolean { getItemShopId()?.let { return true } ?: return false }
+
+
 
 
 
@@ -115,7 +167,8 @@ class FlyerItemStack(item: ItemStack = ItemStack(Material.BEDROCK)) {
     fun removeTag(key: String) { nbt.remove(key) }
     /** 获取NBT数据 **/
     fun getTag(key: String): ItemTagData? { return nbt[key] }
-
+    /** 获得所有NBT数据 **/
+    fun getTags(): ItemTag { return nbt }
 
     /** 深拷贝 **/
     fun clone(): FlyerItemStack { return FlyerItemStack(getItem()) }
@@ -123,4 +176,16 @@ class FlyerItemStack(item: ItemStack = ItemStack(Material.BEDROCK)) {
     override fun toString(): String {
         return getItem().toJson()
     }
+
+    /** 判断两件物品是否相同 **/
+    fun same(flyerItemStack: FlyerItemStack): Boolean {
+        val item = flyerItemStack.sourceItem
+        if (sourceItem.type != item.type) return false
+        if (sourceItem.amount != item.amount) return false
+        if (nbt != item.getItemTag()) return false
+        return true
+    }
+
+    /** 判断两件物品是否相同 **/
+    fun same(itemStack: ItemStack): Boolean { return same(FlyerItemStack(itemStack)) }
 }

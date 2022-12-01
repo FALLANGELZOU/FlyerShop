@@ -1,5 +1,7 @@
 package com.angel.mc.flyer.menu.shop
 
+import com.angel.mc.flyer.EconomyAdapter.charge
+import com.angel.mc.flyer.EconomyAdapter.pay
 import com.angel.mc.flyer.FlyerShop
 import com.angel.mc.flyer.entity.FlyerItemStack
 import com.angel.mc.flyer.menu.shopEnum.ItemShopStatus
@@ -8,6 +10,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
+import taboolib.common.util.random
 import taboolib.common.util.subList
 import taboolib.module.chat.colored
 import taboolib.module.nms.ItemTag
@@ -16,9 +19,12 @@ import taboolib.module.ui.ClickEvent
 import taboolib.module.ui.ClickType
 import taboolib.module.ui.openMenu
 import taboolib.module.ui.type.Basic
+import taboolib.platform.util.giveItem
 import taboolib.platform.util.isAir
 import taboolib.platform.util.isNotAir
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 class ShopView(title: String): Basic(title) {
 
@@ -38,9 +44,6 @@ class ShopView(title: String): Basic(title) {
     /** 页面可用元素缓存 **/
     internal var elementsCache = mutableListOf<FlyerItemStack>()
 
-    /** 页面玩家 **/
-    private lateinit var player: Player
-
     /**
      * 可用元素列表回调
      */
@@ -48,29 +51,61 @@ class ShopView(title: String): Basic(title) {
         elementsCache = elements()
     }
 
+    /** 用来判断是否是双击 **/
+    private var clickTick = 0L
+
     /**
      * 点击菜单
      */
-    internal var clickMenuCallback: ((event: ClickEvent, player: Player) -> Unit) = { e, p ->
+    internal var clickMenuCallback: ((event: ClickEvent) -> Unit) = { e ->
         when (e.rawSlot) {
             e.inventory.size-2 -> {
                 if (page != 0) {
                     page --
-                    p.openInventory(build())
+                    e.clicker.openInventory(build())
                 }
             }
 
             e.inventory.size-1 -> {
                 if ((page+1)*slotSize <= elementsCache.size) {
                     page++
-                    p.openInventory(build())
+                    e.clicker.openInventory(build())
                 }
 
             }
-
             else -> {
-                if (e.currentItem.isNotAir() && e.clickEvent().isShiftClick) {
+                if (e.currentItem.isNotAir() && e.clickType == ClickType.CLICK && isDoubleClick()) {
+                    val item = elementsCache[page*slotSize+e.rawSlot]
+                    var price = 0.toDouble()
+                    val maxPrice = item.getMaxPrice()
+                    val minPrice = item.getMinPrice()
+                    if (maxPrice != null && minPrice != null) {
+                        price = random(minPrice.toDouble(), maxPrice.toDouble())
+                        price = (price * 1000).roundToInt().toDouble() / 1000
+                    } else {
+                        maxPrice?.let { price = it.toDouble() }
+                        minPrice?.let { price = it.toDouble() }
+                    }
+                    if (item.getShopStatus() == ItemShopStatus.SELL) {
+                        //  商店卖
+                        e.clicker.pay(price) {
+                            item.addShopCount()
+                            e.clicker.giveItem(item.getItemWithoutShopInfo())
+                        }
 
+                    } else {
+                        //  商店买
+                        for(slot in 0 until  e.clicker.inventory.size) {
+                            val playerItem = e.clicker.inventory.getItem(slot)
+                            if (playerItem.isNotAir() && playerItem == item.getItemWithoutShopInfo()) {
+                                e.clicker.charge(price) {
+                                    item.addShopCount()
+                                    e.clicker.inventory.setItem(slot, null)
+                                }
+                                break
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -90,7 +125,7 @@ class ShopView(title: String): Basic(title) {
     }
 
     private fun clickMenu(event: ClickEvent) {
-        this.clickMenuCallback(event, player)
+        this.clickMenuCallback(event)
     }
 
     override fun rows(rows: Int) {
@@ -126,7 +161,6 @@ class ShopView(title: String): Basic(title) {
          * 构建事件处理函数, 重新刷了一遍
          */
         fun processBuild(p: Player, inventory: Inventory, async: Boolean) {
-            player = p
             //  放置切换按钮
             setButton(inventory)
             //  放置商品
@@ -148,7 +182,25 @@ class ShopView(title: String): Basic(title) {
                 //  点击其他
             }
         }
+
+        onClose {
+
+        }
         // 构建页面
         return super.build()
+    }
+
+    /** 判断是否是双击 **/
+    private fun isDoubleClick(): Boolean {
+        if (clickTick == 0L) {
+            clickTick = System.currentTimeMillis()
+            return false
+        }
+        if (System.currentTimeMillis() - clickTick <= 200) {
+            clickTick = 0L
+            return true
+        }
+        clickTick = 0L
+        return false
     }
 }

@@ -3,6 +3,8 @@ package com.angel.mc.flyer.flyerCommands
 
 
 import com.angel.mc.flyer.FlyerShop
+import com.angel.mc.flyer.ShopItemStore.buyGoods
+import com.angel.mc.flyer.ShopItemStore.sellGoods
 import com.angel.mc.flyer.entity.FlyerItemStack
 import com.angel.mc.flyer.utils.ItemUtils.yamlDeserialize
 import org.bukkit.Bukkit
@@ -29,12 +31,7 @@ object FlyerShopCommand {
             execute<ProxyPlayer> { sender, context, argument ->
                 (Bukkit.getPlayer(sender.uniqueId))?.openMenu<ShopView>("购买商店") {
                     rows(5)
-                    val items = FlyerShop.config.getList("goods")?.let {
-                            list -> list.map { FlyerItemStack(it.toString().yamlDeserialize() as ItemStack)
-                            }
-                        .also { it.toMutableList() }
-                        .filter { it.getShopStatus() == ItemShopStatus.SELL && (it.getMaxPrice() != null || it.getMinPrice() != null) }
-                    }.let { it?.toMutableList() } ?: mutableListOf()
+                    val items = sellGoods.values.toMutableList()
                     elements { items }
                 }
             }
@@ -44,11 +41,7 @@ object FlyerShopCommand {
             execute<ProxyPlayer> { sender, context, argument ->
                 (Bukkit.getPlayer(sender.uniqueId))?.openMenu<ShopView>("收购商店") {
                     rows(5)
-                    val items = FlyerShop.config.getList("goods")?.let {
-                            list -> list.map { FlyerItemStack(it.toString().yamlDeserialize() as ItemStack) }
-                        .also { it.toMutableList() }
-                        .filter { it.getShopStatus() == ItemShopStatus.BUY && (it.getMaxPrice() != null || it.getMinPrice() != null) }
-                    }.let { it?.toMutableList() } ?: mutableListOf()
+                    val items = buyGoods.values.toMutableList()
                     elements { items }
                 }
             }
@@ -58,11 +51,6 @@ object FlyerShopCommand {
             execute<ProxyPlayer> { sender, context, argument ->
                 (Bukkit.getPlayer(sender.uniqueId))?.openMenu<ShopSettingView>("商店配置") {
                     rows(5)
-                    val items = FlyerShop.config.getList("goods")?.let {
-                            list -> list.map { FlyerItemStack(it.toString().yamlDeserialize() as ItemStack) }.also { it.toMutableList() }
-                    }.let { it?.toMutableList() } ?: mutableListOf()
-                    elements { items }
-
                 }
             }
         }

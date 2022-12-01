@@ -42,15 +42,23 @@ class ItemDetailView(title: String): Basic(title) {
     private val maxPrice = ItemStack(Material.GOLD_INGOT).setItemTag(ItemTag())
     private val maxPriceSlot = 1*9+6
 
+    /** 商品展示名称 **/
     private val displayName = ItemStack(Material.NAME_TAG).setItemTag(ItemTag())
-    private val displayNameSlot = 2*9+2
+    private val displayNameSlot = 3*9+2
+
+    /** 商品数量是否有限制 **/
+    private val limit = ItemStack(Material.SLIME_BALL).setItemTag(ItemTag())
+    private val limitSlot = 3*9+4
+
+    /** 增加商品购买/出售次数 **/
+    private val count = ItemStack(Material.REDSTONE).setItemTag(ItemTag())
+    private val countSlot = 3*9+6
+
 
     override fun rows(rows: Int) {
         super.rows(rows)
         this.slotSize = rows * 9
     }
-
-
 
     /** 点击菜单 **/
     private fun clickMenu(event: ClickEvent) {
@@ -62,6 +70,46 @@ class ItemDetailView(title: String): Basic(title) {
                 minPriceSlot -> clickMinPrice(event)
                 maxPriceSlot -> clickMaxPrice(event)
                 displayNameSlot -> clickDisplayName(event)
+                limitSlot -> clickLimit(event)
+                countSlot -> clickCount(event)
+            }
+        }
+    }
+
+    private fun clickCount(event: ClickEvent) {
+        if (event.clickEvent().isRightClick) {
+            item.clearShopCount()
+            count.modifyLore {
+                clear()
+                add("0") }
+            event.inventory.setItem(countSlot, count)
+        }
+    }
+
+    private fun clickLimit(event: ClickEvent) {
+        if (event.clickEvent().isRightClick) {
+            item.setShopLimit(null)
+            limit.modifyLore {
+                clear()
+                add("&c无".colored())
+            }
+            event.inventory.setItem(limitSlot, limit)
+        } else if (event.clickEvent().isLeftClick) {
+            player.closeInventory()
+            player.sendMessage("&7请在聊天框中输入&3&l商品数量限制&7，输入[&2&lcancel&7]取消".colored())
+            player.subscribeInput { event, fromTime ->
+                val nowTime = System.currentTimeMillis()
+                if (event.message == "cancel") {
+                    player.sendMessage("&c已取消！".colored())
+                } else if (nowTime - fromTime <= 2000*60) {
+                    event.message.toIntOrNull()?.let {
+                        item.setShopLimit(it)
+                        //  去主线打开inventory
+                        sync { player.openInventory(build()) }
+                    } ?: kotlin.run { player.sendMessage("&c请输入数字！".colored()) }
+                } else {
+                    player.sendMessage("&3输入已失效，请尽快输入！".colored())
+                }
             }
         }
     }
@@ -194,6 +242,22 @@ class ItemDetailView(title: String): Basic(title) {
                 clear()
                 add("&7当前名称: ${item.getDisplayName()}".colored() ) }
             inventory.setItem(displayNameSlot, displayName)
+
+            //  设置有无限制
+            limit.modifyMeta<ItemMeta> { setDisplayName("&b&l数量限制".colored()) }
+            limit.modifyLore {
+                clear()
+                val number = item.getShopLimit()
+                if (number == null) add("&c无".colored()) else add("$number") }
+            inventory.setItem(limitSlot, limit)
+
+            //  设置次数统计
+            count.modifyMeta<ItemMeta> { setDisplayName("&d&l购买(出售)次数".colored()) }
+            count.modifyLore {
+                clear()
+                add("${item.getShopCount()}") }
+            inventory.setItem(countSlot, count)
+
 
 
             //  返回上一级菜单
