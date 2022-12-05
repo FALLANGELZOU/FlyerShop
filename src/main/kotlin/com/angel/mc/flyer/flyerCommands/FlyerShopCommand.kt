@@ -4,6 +4,7 @@ package com.angel.mc.flyer.flyerCommands
 
 import com.angel.mc.flyer.FlyerShop
 import com.angel.mc.flyer.ShopItemStore.buyGoods
+import com.angel.mc.flyer.ShopItemStore.goods
 import com.angel.mc.flyer.ShopItemStore.sellGoods
 import com.angel.mc.flyer.entity.FlyerItemStack
 import com.angel.mc.flyer.utils.ItemUtils.yamlDeserialize
@@ -51,6 +52,7 @@ object FlyerShopCommand {
             execute<ProxyPlayer> { sender, context, argument ->
                 (Bukkit.getPlayer(sender.uniqueId))?.openMenu<ShopSettingView>("商店配置") {
                     rows(5)
+                    elementsCache = goods.values.toMutableList()
                 }
             }
         }

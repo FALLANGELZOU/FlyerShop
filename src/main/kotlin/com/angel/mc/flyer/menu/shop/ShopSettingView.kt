@@ -38,6 +38,10 @@ open class ShopSettingView(title: String) : Basic(title) {
     /** 页面玩家 **/
     private lateinit var player: Player
 
+    /** 页面可用元素缓存 **/
+    internal var elementsCache = mutableListOf<FlyerItemStack>()
+
+
     /** 本次页面所使用的元素缓存 **/
     private lateinit var elementItems: MutableList<FlyerItemStack>
 
@@ -73,11 +77,7 @@ open class ShopSettingView(title: String) : Basic(title) {
                         }
                         //  当修改完成时
                         onModifyFinish {
-                            it.getItemShopId()?.let { id ->
-                                goods[id] = it
-                                println(goods[id])
-                                ShopItemStore.save()
-                            }
+                            ShopItemStore.save()
                         }
                     }
                 }
@@ -104,6 +104,7 @@ open class ShopSettingView(title: String) : Basic(title) {
                         flyerItemStack.setItemShopId(id)
                         goods[generateItemUUID()] = flyerItemStack
                         ShopItemStore.save()
+                        elementsCache.add(flyerItemStack)
                         //  移入Menu
                         setItem(i, flyerItemStack, e.inventory)
                         //  移除物品
@@ -168,7 +169,7 @@ open class ShopSettingView(title: String) : Basic(title) {
      * 构建页面
      */
     override fun build(): Inventory {
-        elementItems = subList(goods.values.toList(), page * slotSize, (page + 1) * slotSize).toMutableList()
+        elementItems = subList(elementsCache, page * slotSize, (page + 1) * slotSize).toMutableList()
 
         /**
          * 构建事件处理函数, 重新刷了一遍

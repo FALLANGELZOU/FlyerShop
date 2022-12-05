@@ -3,6 +3,7 @@ package com.angel.mc.flyer.menu.shop
 import com.angel.mc.flyer.EconomyAdapter.charge
 import com.angel.mc.flyer.EconomyAdapter.pay
 import com.angel.mc.flyer.FlyerShop
+import com.angel.mc.flyer.ShopItemStore
 import com.angel.mc.flyer.entity.FlyerItemStack
 import com.angel.mc.flyer.menu.shopEnum.ItemShopStatus
 import com.angel.mc.flyer.utils.ItemUtils.yamlSerialize
@@ -26,7 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-class ShopView(title: String): Basic(title) {
+open class ShopView(title: String): Basic(title) {
 
     /** 页数 **/
     var page = 0
@@ -184,7 +185,7 @@ class ShopView(title: String): Basic(title) {
         }
 
         onClose {
-
+            ShopItemStore.save()
         }
         // 构建页面
         return super.build()

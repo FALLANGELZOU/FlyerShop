@@ -43,7 +43,6 @@ object ShopItemStore {
     fun save() {
         //  异步存储
         val map = cache.toMutableMap()
-        println(map)
         submit(async = true) {
             val saveList = mutableListOf<String>()
             map.forEach { saveList.add(it.value.getItem().yamlSerialize()) }
